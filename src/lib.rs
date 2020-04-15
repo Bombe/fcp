@@ -1,3 +1,10 @@
+#![crate_name = "fcp"]
+//! # Freenet Client Protocol Implementation
+//!
+//! The Freenet Client Protocol (FCP) is the protocol that is used
+//! for the communication between a [Freenet](https://freenetproject.org/)
+//! node and its client applications.
+//!
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::Shutdown::Both;
@@ -6,15 +13,24 @@ use std::net::TcpStream;
 use crate::error::Error::{NotConnected, ProtocolError};
 use crate::error::{Error, ToFcpError};
 
+/// FCP-specific errors.
 pub mod error {
     use std::fmt::{Display, Formatter, Result};
 
     use crate::error::Error::IoError;
 
+    /// Enumeration of possible errors during FCP communication.
     #[derive(Debug)]
     pub enum Error {
+        /// Wrapper for an I/O error.
         IoError(std::io::Error),
+
+        /// Error signaling that an FCP connection was used before
+        /// it was connected.
         NotConnected,
+
+        /// Error during FCP communication, signaling unexpected
+        /// or invalid messages.
         ProtocolError,
     }
 
@@ -37,6 +53,9 @@ pub mod error {
     }
 }
 
+/// A connection to a Freenet node.
+///
+/// Use [default](#method.default) or [create](#method.create) to create new connections.
 #[derive(Debug)]
 pub struct FcpConnection {
     host: String,
@@ -44,7 +63,10 @@ pub struct FcpConnection {
     stream: Option<Box<TcpStream>>,
 }
 
+/// Methods for creating new FCP connections.
 impl FcpConnection {
+    /// Creates a new connection to a node running on the given
+    /// host, using the default FCP port number of `9481`.
     pub fn default(host: &str) -> FcpConnection {
         FcpConnection {
             host: String::from(host),
@@ -52,6 +74,9 @@ impl FcpConnection {
             stream: None,
         }
     }
+
+    /// Creates a new connection to a node running on the given
+    /// host and port number.
     pub fn create(host: &str, port: u16) -> FcpConnection {
         FcpConnection {
             host: String::from(host),
@@ -69,7 +94,26 @@ impl Drop for FcpConnection {
     }
 }
 
+/// Methods for manipulating FCP connections, sending
+/// messages, and basically doing things with it.
 impl FcpConnection {
+    /// Starts this FCP connection, sending the given client name
+    /// to the node as identifier. A connection has to be connected
+    /// before messages can be sent; failure to do so will result
+    /// in [NotConnected] errors!
+    ///
+    /// # Errors
+    ///
+    /// Any I/O error from the underlying `TcpStream` is wrapped
+    /// into an [FCP Error] and returned.
+    ///
+    /// If the node does not answer our `ClientHello` message
+    /// with a corresponding `NodeHello` message, a
+    /// [ProtocolError] is returned.
+    ///
+    /// [FCP Error]: ./error/index.html
+    /// [NotConnected]: ./error/enum.Error.html
+    /// [ProtocolError]: ./error/enum.Error.html
     pub fn connect(&mut self, client_name: &str) -> Result<(), Error> {
         let stream = TcpStream::connect((self.host.as_str(), self.port)).to_fcp_error()?;
         self.stream = Option::Some(Box::new(stream));
@@ -86,6 +130,14 @@ impl FcpConnection {
         Ok(())
     }
 
+    /// Disconnects this connection from the node.
+    ///
+    /// # Errors
+    ///
+    /// Errors from the underlying `TcpStream` are wrapped in an
+    /// [FCP Error] and returned.
+    ///
+    /// [FCP Error]: ./error/index.html
     pub fn disconnect(&mut self) -> Result<(), Error> {
         if let Some(stream) = &self.stream {
             stream.shutdown(Both).to_fcp_error()?;
@@ -93,6 +145,19 @@ impl FcpConnection {
         Ok(())
     }
 
+    /// Sends the given message to the node.
+    ///
+    /// # Errors
+    ///
+    /// If the connection has not been [connected], a
+    /// [NotConnected] error is returned.
+    ///
+    /// Errors from the underlying `TcpStream` are wrapped in an
+    /// [FCP Error] and returned.
+    ///
+    /// [connected]: #method.connect
+    /// [NotConnected]: ./error/enum.Error.html
+    /// [FCP Error]: ./error/index.html
     pub fn send_message(&mut self, fcp_message: FcpMessage) -> Result<(), Error> {
         match self.stream.as_mut() {
             None => return Err(NotConnected),
@@ -105,6 +170,22 @@ impl FcpConnection {
         Ok(())
     }
 
+    /// Receives a message from the node, blocking until it has
+    /// been received completely.
+    ///
+    /// This method can not handle messages with payload.
+    ///
+    /// # Errors
+    ///
+    /// If the connection has not been [connected], a
+    /// [NotConnected] error is returned.
+    ///
+    /// Errors from the underlying `TcpStream` are wrapped in an
+    /// [FCP Error] and returned.
+    ///
+    /// [connected]: #method.connect
+    /// [NotConnected]: ./error/enum.Error.html
+    /// [FCP Error]: ./error/index.html
     pub fn recv_message(&mut self) -> Result<FcpMessage, Error> {
         match self.stream.as_mut() {
             None => return Err(NotConnected),
@@ -132,13 +213,24 @@ impl FcpConnection {
     }
 }
 
+/// An FCP message.
+///
+/// A message consists of a name and an arbitrary number of
+/// key-value pairs.
 #[derive(Debug)]
 pub struct FcpMessage {
+    /// The name of the message.
     name: String,
+
+    /// The key-value pairs making up the content of the message.
     fields: HashMap<String, String>,
 }
 
+/// Methods that create [FCP Message]s.
+///
+/// [FCP Message]: struct.FcpMessage.html
 impl FcpMessage {
+    /// Creates a new FCP message with the given name.
     pub fn create(name: &str) -> FcpMessage {
         FcpMessage {
             name: String::from(name),
@@ -147,11 +239,20 @@ impl FcpMessage {
     }
 }
 
+/// Methods that manipulate and query [FCP Message]s.
+///
+/// [FCP Message]: struct.FcpMessage.html
 impl FcpMessage {
+    /// Adds a field to the message.
+    ///
+    /// If a field with the given name already exists, it will be
+    /// overwritten.
     pub fn add_field(&mut self, name: &str, value: &str) {
         self.fields.insert(name.to_string(), value.to_string());
     }
 
+    /// Renders the message into a field set suitable for transfering
+    /// it over FCP.
     fn to_field_set(&self) -> String {
         let mut string = String::new();
         string.push_str(&self.name);
