@@ -3,11 +3,13 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::Shutdown::Both;
 use std::net::TcpStream;
 
+use crate::error::Error::ProtocolError;
 use crate::error::{Error, ToFcpError};
 
 mod error {
-    use crate::error::Error::IoError;
     use std::fmt::{Display, Formatter, Result};
+
+    use crate::error::Error::IoError;
 
     #[derive(Debug)]
     pub enum Error {
@@ -69,10 +71,19 @@ impl Drop for FcpConnection {
 }
 
 impl FcpConnection {
-    pub fn connect(&mut self) -> Result<(), Error> {
-        self.stream = Option::Some(Box::new(
-            TcpStream::connect((self.host.as_str(), self.port)).to_fcp_error()?,
-        ));
+    pub fn connect(&mut self, client_name: &str) -> Result<(), Error> {
+        let stream = TcpStream::connect((self.host.as_str(), self.port)).to_fcp_error()?;
+        self.stream = Option::Some(Box::new(stream));
+
+        let mut client_hello = FcpMessage::create("ClientHello");
+        client_hello.add_field("Name", client_name);
+        client_hello.add_field("ExpectedVersion", "2.0");
+        self.send_message(client_hello)?;
+
+        let node_hello = self.recv_message()?;
+        if node_hello.name != "NodeHello" {
+            return Err(ProtocolError);
+        }
         Ok(())
     }
 

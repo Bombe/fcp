@@ -1,8 +1,9 @@
+use std::error::Error;
+
 use clap::{crate_version, App, Arg};
 use config::File;
 
-use fcp::{FcpConnection, FcpMessage};
-use std::error::Error;
+use fcp::FcpConnection;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut config = config::Config::default();
@@ -28,15 +29,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         )
         .get_matches();
 
-    println!("fcp 0.1");
+    println!("fcp {}", crate_version!());
 
     let mut fcp_connection = FcpConnection::default(matches.value_of("hostname").unwrap());
-    fcp_connection.connect()?;
-    let mut client_hello = FcpMessage::create("ClientHello");
-    client_hello.add_field("Name", "TestClient");
-    client_hello.add_field("ExpectedVersion", "2.0");
-    fcp_connection.send_message(client_hello)?;
-    println!("got: {:?}", fcp_connection.recv_message().unwrap());
+    fcp_connection.connect("TestClient")?;
+    println!(
+        "Connected to {}:{}.",
+        matches.value_of("hostname").unwrap(),
+        9481
+    );
 
     Ok(())
 }
