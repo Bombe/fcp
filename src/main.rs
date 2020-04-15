@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[derive(Debug, PartialEq)]
 struct FcpArguments {
     hostname: String,
     port: u16,
@@ -37,6 +38,7 @@ struct FcpArguments {
     verbose: bool,
 }
 
+#[derive(Debug, PartialEq)]
 enum FcpCommand {
     Test,
 }
@@ -127,5 +129,92 @@ impl FcpConfig {
             fcp_hostname,
             fcp_port,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{parse_arguments, FcpArguments, FcpConfig};
+
+    #[test]
+    fn empty_args_are_parsed_correctly() {
+        let args = parse_arguments(&FcpConfig::create(None, None), Vec::new());
+        assert_eq!(
+            args,
+            FcpArguments {
+                hostname: "localhost".to_string(),
+                port: 9481,
+                command: None,
+                verbose: false,
+            }
+        )
+    }
+
+    #[test]
+    fn hostname_is_parsed_with_short_parameter_name() {
+        let args = parse_arguments(
+            &FcpConfig::create(None, None),
+            vec!["-h".to_string(), "hostname.test".to_string()],
+        );
+        assert_eq!(
+            args,
+            FcpArguments {
+                hostname: "hostname.test".to_string(),
+                port: 9481,
+                command: None,
+                verbose: false,
+            }
+        )
+    }
+
+    #[test]
+    fn hostname_is_parsed_with_long_parameter_name() {
+        let args = parse_arguments(
+            &FcpConfig::create(None, None),
+            vec!["--fcp-host".to_string(), "hostname.test".to_string()],
+        );
+        assert_eq!(
+            args,
+            FcpArguments {
+                hostname: "hostname.test".to_string(),
+                port: 9481,
+                command: None,
+                verbose: false,
+            }
+        )
+    }
+
+    #[test]
+    fn port_is_parsed_with_short_parameter_name() {
+        let args = parse_arguments(
+            &FcpConfig::create(None, None),
+            vec!["-p".to_string(), "12345".to_string()],
+        );
+        assert_eq!(
+            args,
+            FcpArguments {
+                hostname: "localhost".to_string(),
+                port: 12345,
+                command: None,
+                verbose: false,
+            }
+        )
+    }
+
+    #[test]
+    fn port_is_parsed_with_long_parameter_name() {
+        let args = parse_arguments(
+            &FcpConfig::create(None, None),
+            vec!["--fcp-port".to_string(), "12345".to_string()],
+        );
+        assert_eq!(
+            args,
+            FcpArguments {
+                hostname: "localhost".to_string(),
+                port: 12345,
+                command: None,
+                verbose: false,
+            }
+        )
     }
 }
