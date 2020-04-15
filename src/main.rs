@@ -1,12 +1,18 @@
 use std::error::Error;
 
-use clap::{crate_version, App, Arg};
+use clap::{crate_version, App, Arg, SubCommand};
 use config::File;
 
+use crate::FcpCommand::Test;
 use fcp::FcpConnection;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let arguments = parse_arguments();
+
+    if arguments.command.is_none() {
+        println!("No command to run.");
+        return Ok(());
+    }
 
     let mut fcp_connection = FcpConnection::create(&arguments.hostname, arguments.port);
     fcp_connection.connect("TestClient")?;
@@ -18,6 +24,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 struct FcpArguments {
     hostname: String,
     port: u16,
+    command: Option<FcpCommand>,
+}
+
+enum FcpCommand {
+    Test,
 }
 
 fn parse_arguments() -> FcpArguments {
@@ -51,6 +62,7 @@ fn parse_arguments() -> FcpArguments {
                 .help("The FCP port number")
                 .default_value(&default_fcp_port),
         )
+        .subcommand(SubCommand::with_name("test").about("Tests whether a node is reachable"))
         .get_matches();
 
     FcpArguments {
@@ -60,5 +72,9 @@ fn parse_arguments() -> FcpArguments {
             .unwrap()
             .parse()
             .unwrap_or(9481),
+        command: match arg_matches.subcommand() {
+            ("test", Some(_)) => Some(Test),
+            _ => None,
+        },
     }
 }
