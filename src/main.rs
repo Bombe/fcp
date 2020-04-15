@@ -52,6 +52,7 @@ fn parse_arguments() -> FcpArguments {
             Arg::with_name("hostname")
                 .short("h")
                 .long("fcp-host")
+                .takes_value(true)
                 .help("The FCP host name")
                 .default_value(&default_fcp_hostname),
         )
@@ -59,6 +60,7 @@ fn parse_arguments() -> FcpArguments {
             Arg::with_name("port")
                 .short("p")
                 .long("fcp-port")
+                .takes_value(true)
                 .help("The FCP port number")
                 .default_value(&default_fcp_port),
         )
