@@ -29,6 +29,8 @@ impl FcpConnection {
 }
 
 impl Drop for FcpConnection {
+    // don’t care if disconnecting fails when going out of scope
+    #[allow(unused_must_use)]
     fn drop(&mut self) {
         self.disconnect();
     }
@@ -43,11 +45,11 @@ impl FcpConnection {
         Ok(())
     }
 
-    #[allow(unused_must_use)]
-    pub fn disconnect(&mut self) {
+    pub fn disconnect(&mut self) -> Result<(), Error> {
         if let Some(stream) = &self.stream {
-            stream.shutdown(Both);
+            stream.shutdown(Both)?;
         }
+        Ok(())
     }
 
     pub fn send_message(&mut self, fcp_message: FcpMessage) -> Result<(), Error> {
