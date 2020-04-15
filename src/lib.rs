@@ -99,7 +99,7 @@ impl FcpConnection {
             None => return Err(Error::NotConnected),
             Some(stream) => {
                 stream
-                    .write(fcp_message.to_string().as_bytes())
+                    .write(fcp_message.to_field_set().as_bytes())
                     .to_fcp_error()?;
             }
         }
@@ -146,14 +146,14 @@ impl FcpMessage {
             fields: HashMap::new(),
         }
     }
+}
 
+impl FcpMessage {
     pub fn add_field(&mut self, name: &str, value: &str) {
         self.fields.insert(name.to_string(), value.to_string());
     }
-}
 
-impl ToString for FcpMessage {
-    fn to_string(&self) -> String {
+    fn to_field_set(&self) -> String {
         let mut string = String::new();
         string.push_str(&self.name);
         string.push('\n');
