@@ -2,8 +2,9 @@ use clap::{crate_version, App, Arg};
 use config::File;
 
 use fcp::{FcpConnection, FcpMessage};
+use std::error::Error;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let mut config = config::Config::default();
 
     config
@@ -30,10 +31,12 @@ fn main() {
     println!("fcp 0.1");
 
     let mut fcp_connection = FcpConnection::default(matches.value_of("hostname").unwrap());
-    fcp_connection.connect().expect("could not connect");
+    fcp_connection.connect()?;
     let mut client_hello = FcpMessage::create("ClientHello");
     client_hello.add_field("Name", "TestClient");
     client_hello.add_field("ExpectedVersion", "2.0");
-    fcp_connection.send_message(client_hello).unwrap();
+    fcp_connection.send_message(client_hello)?;
     println!("got: {:?}", fcp_connection.recv_message().unwrap());
+
+    Ok(())
 }

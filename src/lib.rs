@@ -1,7 +1,39 @@
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::net::Shutdown::Both;
 use std::net::TcpStream;
+
+use crate::error::{Error, ToFcpError};
+
+mod error {
+    use crate::error::Error::IoError;
+    use std::fmt::{Display, Formatter, Result};
+
+    #[derive(Debug)]
+    pub enum Error {
+        IoError(std::io::Error),
+        NotConnected,
+        ProtocolError,
+    }
+
+    impl Display for Error {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write!(f, "{}", self)
+        }
+    }
+
+    impl std::error::Error for Error {}
+
+    pub trait ToFcpError<T> {
+        fn to_fcp_error(self) -> core::result::Result<T, Error>;
+    }
+
+    impl<T> ToFcpError<T> for core::result::Result<T, std::io::Error> {
+        fn to_fcp_error(self) -> core::result::Result<T, Error> {
+            self.map_err(|error| IoError(error))
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct FcpConnection {
@@ -38,25 +70,26 @@ impl Drop for FcpConnection {
 
 impl FcpConnection {
     pub fn connect(&mut self) -> Result<(), Error> {
-        self.stream = Option::Some(Box::new(TcpStream::connect((
-            self.host.as_str(),
-            self.port,
-        ))?));
+        self.stream = Option::Some(Box::new(
+            TcpStream::connect((self.host.as_str(), self.port)).to_fcp_error()?,
+        ));
         Ok(())
     }
 
     pub fn disconnect(&mut self) -> Result<(), Error> {
         if let Some(stream) = &self.stream {
-            stream.shutdown(Both)?;
+            stream.shutdown(Both).to_fcp_error()?;
         }
         Ok(())
     }
 
     pub fn send_message(&mut self, fcp_message: FcpMessage) -> Result<(), Error> {
         match self.stream.as_mut() {
-            None => return Err(Error::new(ErrorKind::NotConnected, "not connected")),
+            None => return Err(Error::NotConnected),
             Some(stream) => {
-                stream.write(fcp_message.to_string().as_bytes())?;
+                stream
+                    .write(fcp_message.to_string().as_bytes())
+                    .to_fcp_error()?;
             }
         }
         Ok(())
@@ -64,15 +97,15 @@ impl FcpConnection {
 
     pub fn recv_message(&mut self) -> Result<FcpMessage, Error> {
         match self.stream.as_mut() {
-            None => return Err(Error::new(ErrorKind::NotConnected, "not connected")),
+            None => return Err(Error::NotConnected),
             Some(stream) => {
                 let mut name = String::new();
                 let mut reader = BufReader::new(stream);
-                reader.read_line(&mut name)?;
+                reader.read_line(&mut name).to_fcp_error()?;
                 let mut message = FcpMessage::create(&name.trim_end_matches('\n'));
                 loop {
                     let mut line = String::new();
-                    reader.read_line(&mut line)?;
+                    reader.read_line(&mut line).to_fcp_error()?;
                     if let Some(equal_sign) = line.find('=') {
                         message.add_field(
                             &line.as_str()[..equal_sign],
