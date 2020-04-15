@@ -52,7 +52,6 @@ impl FcpConnection {
             stream: None,
         }
     }
-    #[allow(dead_code)]
     pub fn create(host: &str, port: u16) -> FcpConnection {
         FcpConnection {
             host: String::from(host),
