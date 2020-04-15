@@ -6,7 +6,7 @@ use std::net::TcpStream;
 use crate::error::Error::{NotConnected, ProtocolError};
 use crate::error::{Error, ToFcpError};
 
-mod error {
+pub mod error {
     use std::fmt::{Display, Formatter, Result};
 
     use crate::error::Error::IoError;
