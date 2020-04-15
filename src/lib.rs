@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::Shutdown::Both;
 use std::net::TcpStream;
 
-use crate::error::Error::ProtocolError;
+use crate::error::Error::{NotConnected, ProtocolError};
 use crate::error::{Error, ToFcpError};
 
 mod error {
@@ -96,7 +96,7 @@ impl FcpConnection {
 
     pub fn send_message(&mut self, fcp_message: FcpMessage) -> Result<(), Error> {
         match self.stream.as_mut() {
-            None => return Err(Error::NotConnected),
+            None => return Err(NotConnected),
             Some(stream) => {
                 stream
                     .write(fcp_message.to_field_set().as_bytes())
@@ -108,7 +108,7 @@ impl FcpConnection {
 
     pub fn recv_message(&mut self) -> Result<FcpMessage, Error> {
         match self.stream.as_mut() {
-            None => return Err(Error::NotConnected),
+            None => return Err(NotConnected),
             Some(stream) => {
                 let mut name = String::new();
                 let mut reader = BufReader::new(stream);
