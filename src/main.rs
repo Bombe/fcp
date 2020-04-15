@@ -7,7 +7,7 @@ use crate::FcpCommand::Test;
 use fcp::FcpConnection;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let arguments = parse_arguments();
+    let arguments = parse_arguments(std::env::args().collect());
 
     if arguments.command.is_none() {
         println!("No command to run.");
@@ -37,7 +37,7 @@ enum FcpCommand {
     Test,
 }
 
-fn parse_arguments() -> FcpArguments {
+fn parse_arguments(args: Vec<String>) -> FcpArguments {
     let mut config = config::Config::default();
     config
         .merge(File::with_name("./fcp").required(false))
@@ -78,7 +78,7 @@ fn parse_arguments() -> FcpArguments {
                 .help("Be verbose"),
         )
         .subcommand(SubCommand::with_name("test").about("Tests whether a node is reachable"))
-        .get_matches();
+        .get_matches_from(args);
 
     FcpArguments {
         hostname: arg_matches.value_of("hostname").unwrap().to_string(),
