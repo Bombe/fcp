@@ -1,9 +1,24 @@
+use clap::{crate_version, App, Arg};
+
 use fcp::{FcpConnection, FcpMessage};
 
 fn main() {
+    let matches = App::new("fcp")
+        .version(crate_version!())
+        .author("David “Bombe” Roden")
+        .about("Command-line FCP client")
+        .arg(
+            Arg::with_name("hostname")
+                .short("h")
+                .long("fcp-host")
+                .help("The FCP host name")
+                .default_value("localhost"),
+        )
+        .get_matches();
+
     println!("fcp 0.1");
 
-    let mut fcp_connection = FcpConnection::default("freenet");
+    let mut fcp_connection = FcpConnection::default(matches.value_of("hostname").unwrap());
     fcp_connection.connect().expect("could not connect");
     let mut client_hello = FcpMessage::create("ClientHello");
     client_hello.add_field("Name", "TestClient");
