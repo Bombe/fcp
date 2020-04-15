@@ -68,12 +68,15 @@ impl FcpConnection {
                 let mut name = String::new();
                 let mut reader = BufReader::new(stream);
                 reader.read_line(&mut name)?;
-                let mut message = FcpMessage::create(&name);
+                let mut message = FcpMessage::create(&name.trim_end_matches('\n'));
                 loop {
                     let mut line = String::new();
                     reader.read_line(&mut line)?;
                     if let Some(equal_sign) = line.find('=') {
-                        message.add_field(&line.as_str()[..equal_sign], &line[(equal_sign + 1)..]);
+                        message.add_field(
+                            &line.as_str()[..equal_sign],
+                            &line[(equal_sign + 1)..].trim_end_matches('\n'),
+                        );
                     } else {
                         break;
                     }
