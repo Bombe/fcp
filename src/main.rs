@@ -91,7 +91,7 @@ impl FcpConnection {
 #[derive(Debug)]
 struct FcpMessage {
     name: String,
-    fields: HashMap<Box<String>, Box<String>>,
+    fields: HashMap<String, String>,
 }
 
 impl FcpMessage {
@@ -103,8 +103,7 @@ impl FcpMessage {
     }
 
     fn add_field(&mut self, name: &str, value: &str) {
-        self.fields
-            .insert(Box::new(name.to_string()), Box::new(value.to_string()));
+        self.fields.insert(name.to_string(), value.to_string());
     }
 }
 
