@@ -8,8 +8,6 @@ use fcp::FcpConnection;
 fn main() -> Result<(), Box<dyn Error>> {
     let arguments = parse_arguments();
 
-    println!("fcp {}", crate_version!());
-
     let mut fcp_connection = FcpConnection::create(&arguments.hostname, arguments.port);
     fcp_connection.connect("TestClient")?;
     println!("Connected to {}:{}.", arguments.hostname, arguments.port);
