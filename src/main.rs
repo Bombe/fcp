@@ -15,6 +15,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let mut fcp_connection = FcpConnection::create(&arguments.hostname, arguments.port);
+    if arguments.verbose {
+        println!("Connecting to {}:{}...", arguments.hostname, arguments.port);
+    }
     fcp_connection.connect("TestClient")?;
     if arguments.verbose {
         println!("Connected to {}:{}.", arguments.hostname, arguments.port);
