@@ -16,7 +16,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut fcp_connection = FcpConnection::create(&arguments.hostname, arguments.port);
     fcp_connection.connect("TestClient")?;
-    println!("Connected to {}:{}.", arguments.hostname, arguments.port);
+    if arguments.verbose {
+        println!("Connected to {}:{}.", arguments.hostname, arguments.port);
+    }
 
     Ok(())
 }
@@ -25,6 +27,7 @@ struct FcpArguments {
     hostname: String,
     port: u16,
     command: Option<FcpCommand>,
+    verbose: bool,
 }
 
 enum FcpCommand {
@@ -64,6 +67,13 @@ fn parse_arguments() -> FcpArguments {
                 .help("The FCP port number")
                 .default_value(&default_fcp_port),
         )
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .long("verbose")
+                .takes_value(false)
+                .help("Be verbose"),
+        )
         .subcommand(SubCommand::with_name("test").about("Tests whether a node is reachable"))
         .get_matches();
 
@@ -78,5 +88,6 @@ fn parse_arguments() -> FcpArguments {
             ("test", Some(_)) => Some(Test),
             _ => None,
         },
+        verbose: arg_matches.is_present("verbose"),
     }
 }
