@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::process;
 
 use clap::{crate_version, App, AppSettings, Arg, SubCommand};
 use config::File;
@@ -22,7 +23,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     if arguments.verbose {
         println!("Connecting to {}:{}...", arguments.hostname, arguments.port);
     }
-    fcp_connection.connect("TestClient")?;
+    if let Err(error) = fcp_connection.connect("TestClient") {
+        if !arguments.quiet {
+            return Err(Box::new(error));
+        }
+        process::exit(1)
+    }
     if arguments.verbose {
         println!("Connected to {}:{}.", arguments.hostname, arguments.port);
     }
@@ -36,6 +42,7 @@ struct FcpArguments {
     port: u16,
     command: Option<FcpCommand>,
     verbose: bool,
+    quiet: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -76,7 +83,16 @@ fn parse_arguments(config: &FcpConfig, args: Vec<String>) -> FcpArguments {
                 .short("v")
                 .long("verbose")
                 .takes_value(false)
+                .conflicts_with("quiet")
                 .help("Be verbose"),
+        )
+        .arg(
+            Arg::with_name("quiet")
+                .short("q")
+                .long("quiet")
+                .takes_value(false)
+                .conflicts_with("verbose")
+                .help("Be quiet, only set exit codes"),
         )
         .subcommand(SubCommand::with_name("test").about("Tests whether a node is reachable"))
         .setting(AppSettings::NoBinaryName)
@@ -94,6 +110,7 @@ fn parse_arguments(config: &FcpConfig, args: Vec<String>) -> FcpArguments {
             _ => None,
         },
         verbose: arg_matches.is_present("verbose"),
+        quiet: arg_matches.is_present("quiet"),
     }
 }
 
@@ -146,6 +163,7 @@ mod tests {
                 port: 9481,
                 command: None,
                 verbose: false,
+                quiet: false,
             }
         )
     }
@@ -163,6 +181,7 @@ mod tests {
                 port: 9481,
                 command: None,
                 verbose: false,
+                quiet: false,
             }
         )
     }
@@ -180,6 +199,7 @@ mod tests {
                 port: 9481,
                 command: None,
                 verbose: false,
+                quiet: false,
             }
         )
     }
@@ -197,6 +217,7 @@ mod tests {
                 port: 12345,
                 command: None,
                 verbose: false,
+                quiet: false,
             }
         )
     }
@@ -214,6 +235,7 @@ mod tests {
                 port: 12345,
                 command: None,
                 verbose: false,
+                quiet: false,
             }
         )
     }
